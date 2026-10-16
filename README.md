@@ -85,6 +85,13 @@ claim flow and maintainer setup checklist.
 See [CONTRIBUTING.md](CONTRIBUTING.md) for the full guide, the
 [Code of Conduct](CODE_OF_CONDUCT.md), and the [CHANGELOG](CHANGELOG.md).
 
+### Governance & Community
+
+- **Writing a proposal?** Start with the [Proposal Style Guide](docs/proposal-style-guide.md)
+- **See examples first?** Check [Example Governance Proposals](docs/proposal-examples.md) for each category
+- **Community calls & office hours?** Details at [Community Calls](docs/community-calls.md)
+- **Good first issues?** See the [Curation Process](docs/good-first-issue-curation.md)
+
 ---
 
 ## License
