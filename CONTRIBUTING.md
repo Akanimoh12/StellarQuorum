@@ -496,6 +496,24 @@ Good documentation is as important as code. All documentation lives in `docs/` (
 
 ---
 
+## Contributing to Governance and Community
+
+Proposals shape the future of Quorum governance. Before authoring or voting on a proposal, read the [Proposal Style Guide](docs/proposal-style-guide.md) to ensure your proposal includes everything voters need to make an informed decision.
+
+### Writing a Proposal
+
+1. **Start with examples** — read [Example Governance Proposals](docs/proposal-examples.md) to see realistic, fully-worked proposals for each category
+2. **Follow the style guide** — use the required sections and tone guidance for your proposal type
+3. **Get feedback** — discuss your idea in [GitHub Discussions > Governance Questions](https://github.com/StellarQuorum/StellarQuorum/discussions/categories/governance-questions) before submitting on-chain
+4. **Check the acceptance criteria** — make sure your proposal meets all requirements for its category
+
+### Governance Processes
+
+- **Community calls & office hours** — join at [Community Calls](docs/community-calls.md) for live Q&A and governance updates
+- **Good first issues** — see [Good First Issue Curation](docs/good-first-issue-curation.md) to understand how we identify beginner-friendly tasks
+
+---
+
 ## Drips Wave
 
 Quorum participates in the Stellar Wave on Drips Network. Tagged issues earn
