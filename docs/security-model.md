@@ -69,7 +69,7 @@ Quorum is a token-weighted governance system on Stellar. This document describes
 
 3. **No on-chain action execution.** The `execute` function marks the proposal as executed but does not dispatch arbitrary on-chain actions. This is a TODO in the contract.
 
-4. **Single admin key.** The admin is a single address, not a multisig by default. Deployers should use a multisig or hardware wallet for the admin key.
+4. **Single admin key.** The admin is a single address, not a multisig by default. Deployers should use a multisig or hardware wallet for the admin key. See [Admin Key Management Guide](admin-key-management.md) for custody best practices.
 
 5. **No vote change or withdrawal.** Once a vote is cast, it cannot be changed or withdrawn.
 
@@ -79,8 +79,9 @@ Quorum is a token-weighted governance system on Stellar. This document describes
 
 ## Recommendations for Production Deployment
 
-1. Use a **multisig** for the admin key (e.g. 3-of-5).
-2. Use a dedicated **security multisig** for the guardian role.
+1. Use a **multisig** for the admin key (e.g. 3-of-5). See [Admin Key Management Guide](admin-key-management.md) for detailed custody and rotation procedures.
+2. Use a dedicated **security multisig** for the guardian role. See [Incident Response Runbook](incident-response.md) for when and how to use veto power.
 3. Deploy on **testnet first** and run through a full governance cycle before mainnet.
 4. Monitor the `proposal_created`, `vote_cast`, and `proposal_finalized` events for anomalies.
 5. Consider starting with a **higher quorum** (e.g. 10%) and lowering it as participation grows.
+6. Establish a **delegate program** to increase participation. See [Delegate Program Guide](delegate-program.md) for best practices.
