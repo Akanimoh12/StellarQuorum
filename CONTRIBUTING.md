@@ -487,6 +487,10 @@ Good documentation is as important as code. All documentation lives in `docs/` (
 - Every new contract function needs documentation in the contract's `README.md`
 - Every new SDK method needs JSDoc with `@param`, `@returns`, `@throws`, and `@example`
 
+### FAQ
+
+Common questions for users and contributors are answered in the [FAQ](docs/faq.md). Before opening an issue or discussion, check if your question is already answered there.
+
 ### Markdown Style
 
 - Use `##` for major sections, `###` for subsections
