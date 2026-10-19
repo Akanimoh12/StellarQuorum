@@ -39,15 +39,17 @@ All passed proposals enter a 48-hour timelock before execution. A guardian multi
 ## Roadmap
 
 - [x] Freighter wallet connection — connect, connected address, and the snapshot voting-power preview
-- [ ] Sign and submit votes on Stellar testnet through Freighter
-- [ ] Soroban governance contract testnet deployment
-- [ ] Token delegation UI — delegate voting power without transferring tokens
-- [ ] Timelock execution engine — automated execution after 48h delay
-- [ ] Multi-sig proposal creation
-- [ ] Governor contract security audit
-- [ ] QUORUM token distribution and staking
-- [ ] Off-chain signaling (Snapshot-style) before on-chain execution
-- [ ] Governance analytics dashboard
+- [ ] Sign and submit votes on Stellar testnet through Freighter — tracking: [Issue #](https://github.com/StellarQuorum/StellarQuorum/issues)
+- [ ] Soroban governance contract testnet deployment — tracking: [Issue #](https://github.com/StellarQuorum/StellarQuorum/issues)
+- [ ] Token delegation UI — delegate voting power without transferring tokens — tracking: [Issue #](https://github.com/StellarQuorum/StellarQuorum/issues)
+- [ ] Timelock execution engine — automated execution after 48h delay — tracking: [Issue #](https://github.com/StellarQuorum/StellarQuorum/issues)
+- [ ] Multi-sig proposal creation — tracking: [Issue #](https://github.com/StellarQuorum/StellarQuorum/issues)
+- [ ] Governor contract security audit — tracking: [Issue #](https://github.com/StellarQuorum/StellarQuorum/issues)
+- [ ] QUORUM token distribution and staking — tracking: [Issue #](https://github.com/StellarQuorum/StellarQuorum/issues)
+- [ ] Off-chain signaling (Snapshot-style) before on-chain execution — tracking: [Issue #](https://github.com/StellarQuorum/StellarQuorum/issues)
+- [ ] Governance analytics dashboard — tracking: [Issue #](https://github.com/StellarQuorum/StellarQuorum/issues)
+
+See [Roadmap Board](docs/roadmap-board.md) for the public GitHub Projects board tracking these items.
 
 ---
 
@@ -82,6 +84,8 @@ claim flow and maintainer setup checklist.
 2. Make your changes with clear commit messages
 3. Open a PR referencing the issue
 
+New contributors should start with the [Contributor Checklist](CONTRIBUTOR_CHECKLIST.md) for a quick-start guide.
+
 See [CONTRIBUTING.md](CONTRIBUTING.md) for the full guide, the
 [Code of Conduct](CODE_OF_CONDUCT.md), and the [CHANGELOG](CHANGELOG.md).
 
@@ -91,6 +95,8 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for the full guide, the
 - **See examples first?** Check [Example Governance Proposals](docs/proposal-examples.md) for each category
 - **Community calls & office hours?** Details at [Community Calls](docs/community-calls.md)
 - **Good first issues?** See the [Curation Process](docs/good-first-issue-curation.md)
+- **Governance forum?** Join discussions at [GitHub Discussions](https://github.com/StellarQuorum/StellarQuorum/discussions) — see [Governance Forum docs](docs/governance-forum.md)
+- **Using Quorum?** List your protocol on [ADOPTERS.md](ADOPTERS.md)
 
 ---
 
