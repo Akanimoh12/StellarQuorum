@@ -91,6 +91,17 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for the full guide, the
 - **See examples first?** Check [Example Governance Proposals](docs/proposal-examples.md) for each category
 - **Community calls & office hours?** Details at [Community Calls](docs/community-calls.md)
 - **Good first issues?** See the [Curation Process](docs/good-first-issue-curation.md)
+- **Adopting Quorum for your protocol?** Follow the [Governance Adoption Playbook](docs/governance-playbook.md)
+- **Walkthrough of testnet voting?** See the [Testnet Walkthrough](docs/testnet-walkthrough.md) with video transcript
+
+### Documentation
+
+- **FAQ:** Common questions for users and contributors in the [FAQ](docs/faq.md)
+- **Governance parameters:** Choose your governance parameters with the [Parameter Guide](docs/governance-parameters.md)
+- **Security model:** Threat assumptions and mitigations in the [Security Model](docs/security-model.md)
+- **Architecture:** Contract architecture and data flow in the [Architecture doc](docs/architecture.md)
+- **Deployment:** Deploy contracts to testnet/mainnet with the [Deployment Guide](docs/deployment.md)
+- **Delegate incentives:** Design thinking for delegate reward programs in the [Delegate Incentive Program](docs/delegate-incentive-program.md)
 
 ---
 
