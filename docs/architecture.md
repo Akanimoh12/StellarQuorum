@@ -80,6 +80,112 @@ Governance depends on three token functions (the `TokenInterface` trait in
 `ProposalStatus` also defines `Pending` and `Passed`; the contract does not
 currently assign either.
 
+### Sequence Diagram: Happy Path
+
+```mermaid
+sequenceDiagram
+    participant P as Proposer
+    participant G as Governance Contract
+    participant T as Token Contract
+    participant V as Voter
+    participant K as Keeper/Anyone
+    participant GU as Guardian
+
+    P->>G: create_proposal(title, description, ...)
+    G->>T: balance(proposer)
+    T-->>G: returns balance
+    G->>T: total_supply()
+    T-->>G: returns total_supply
+    G->>G: calculate quorum_required
+    G->>G: record snapshot_ledger
+    G-->>P: proposal_id (status: Active)
+
+    Note over V: Voting period (start_ledger to end_ledger)
+
+    V->>G: vote(proposal_id, support)
+    G->>T: get_past_balance(voter, snapshot_ledger)
+    T-->>G: returns voting_power
+    G->>G: record vote weight
+    G-->>V: vote recorded
+
+    Note over K: Wait for ledger > end_ledger
+
+    K->>G: finalize(proposal_id)
+    G->>G: tally votes (for, against, abstain)
+    G->>G: check quorum_required and for > against
+    alt Passes quorum and majority
+        G->>G: status = Queued
+        G->>G: set queue_ledger = ledger + timelock_period
+        G-->>K: proposal queued
+    else Fails quorum or majority
+        G->>G: status = Failed
+        G-->>K: proposal failed
+    end
+
+    Note over GU: Timelock window (end_ledger to queue_ledger)
+
+    GU->>G: veto(proposal_id)
+    Note over GU: Guardian can veto during timelock
+    G->>G: status = Vetoed/Failed
+    G-->>GU: proposal vetoed
+
+    Note over K: Wait for ledger >= queue_ledger
+
+    K->>G: execute(proposal_id)
+    G->>G: status = Executed
+    G->>G: dispatch on-chain actions (TODO)
+    G-->>K: proposal executed
+```
+
+### Sequence Diagram: Vetoed Path
+
+```mermaid
+sequenceDiagram
+    participant P as Proposer
+    participant G as Governance Contract
+    participant T as Token Contract
+    participant V as Voter
+    participant K as Keeper/Anyone
+    participant GU as Guardian
+
+    P->>G: create_proposal(title, description, ...)
+    G->>T: balance(proposer)
+    T-->>G: returns balance
+    G->>T: total_supply()
+    T-->>G: returns total_supply
+    G->>G: calculate quorum_required
+    G->>G: record snapshot_ledger
+    G-->>P: proposal_id (status: Active)
+
+    Note over V: Voting period (start_ledger to end_ledger)
+
+    V->>G: vote(proposal_id, support)
+    G->>T: get_past_balance(voter, snapshot_ledger)
+    T-->>G: returns voting_power
+    G->>G: record vote weight
+    G-->>V: vote recorded
+
+    Note over K: Wait for ledger > end_ledger
+
+    K->>G: finalize(proposal_id)
+    G->>G: tally votes (for, against, abstain)
+    G->>G: check quorum_required and for > against
+    G->>G: status = Queued
+    G->>G: set queue_ledger = ledger + timelock_period
+    G-->>K: proposal queued
+
+    Note over GU: Timelock window (end_ledger to queue_ledger)
+
+    GU->>G: veto(proposal_id)
+    G->>G: status = Vetoed/Failed
+    G-->>GU: proposal vetoed
+
+    Note over K: Execution blocked
+
+    K->>G: execute(proposal_id)
+    G-->>K: error (proposal not Queued)
+```
+
 ## Balance checkpoints and snapshot voting power
 
 Voting power is the balance an address held at the proposal's
