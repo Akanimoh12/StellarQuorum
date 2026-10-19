@@ -2,6 +2,8 @@
 
 Thank you for your interest in contributing to Quorum — on-chain governance infrastructure for the Stellar ecosystem. This guide covers everything you need to get started contributing to any part of the project.
 
+**New contributors?** Start with the [Contributor Checklist](CONTRIBUTOR_CHECKLIST.md) for a quick-start guide before diving into this comprehensive document.
+
 ---
 
 ## Table of Contents
