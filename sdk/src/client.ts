@@ -396,7 +396,11 @@ export class QuorumClient {
         if (lastError instanceof RpcTimeoutError || !isTransientRpcError(error) || attempt === attempts - 1) throw lastError;
         const base = this.config.retryBaseDelayMs ?? DEFAULT_RETRY_BASE_DELAY_MS;
         const jitter = this.config.retryJitterMs ?? DEFAULT_RETRY_JITTER_MS;
-        await delay(base * 2 ** attempt + Math.floor(Math.random() * (jitter + 1)));
+        // Issue #333: false positive. This Math.random only spreads out retry
+        // timing so concurrent clients do not synchronize; it never generates
+        // a key, nonce or token, so the quality of the randomness is
+        // irrelevant to security. See docs/static-analysis.md.
+        await delay(base * 2 ** attempt + Math.floor(Math.random() * (jitter + 1))); // nosemgrep
       }
     }
     throw lastError;

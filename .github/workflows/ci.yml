@@ -179,3 +179,82 @@ jobs:
       # with no automated check surfacing them.
       - name: npm audit (high + critical)
         run: cd sdk && npm audit --audit-level=high
+
+  # Issue #332: nothing previously flagged `unsafe` entering the contracts or
+  # their dependency tree. `#![no_std]` Soroban code should essentially never
+  # need it, so new unsafe is a deliberate, reviewable event rather than
+  # something that slips in with an unrelated dependency bump.
+  unsafe-audit:
+    name: Unsafe Rust Audit (cargo-geiger)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Cache cargo registry and build
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: contracts
+          # Distinct key from the contracts job: geiger resolves the same
+          # lockfile but writes its own target state.
+          key: geiger-${{ hashFiles('contracts/Cargo.lock') }}
+          cache-on-failure: true
+      # geiger scans the sources of every crate in the dependency tree, so the
+      # registry sources have to be on disk first.
+      - name: Fetch dependencies
+        run: cd contracts && cargo fetch --locked
+      - name: Install cargo-geiger
+        uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-geiger
+      # Reports unsafe usage across the contracts and their dependency tree
+      # and records the baseline in the job summary plus an artifact. The
+      # scan step itself is informational — the blocking policy is the
+      # first-party check below — so a geiger/toolchain breakage warns
+      # instead of wedging every PR on a reporting job.
+      - name: cargo geiger baseline
+        run: |
+          cd contracts
+          if cargo geiger --format markdown > geiger-report.md 2> geiger-stderr.log; then
+            {
+              echo "### cargo-geiger baseline"
+              echo ""
+              echo "Unsafe usage across \`contracts/\` and its dependency tree."
+              echo "Policy and triage: \`docs/static-analysis.md\`."
+              echo ""
+              echo '```text'
+              head -n 80 geiger-report.md
+              echo '```'
+            } >> "$GITHUB_STEP_SUMMARY"
+          else
+            status=$?
+            {
+              echo "### cargo-geiger baseline"
+              echo ""
+              echo "::warning::cargo-geiger exited with status ${status}; baseline incomplete."
+              echo ""
+              echo '```text'
+              tail -n 40 geiger-stderr.log
+              echo '```'
+            } >> "$GITHUB_STEP_SUMMARY"
+          fi
+      - name: Upload geiger report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cargo-geiger-report
+          path: |
+            contracts/geiger-report.md
+            contracts/geiger-stderr.log
+          if-no-files-found: ignore
+      # Issue #332 AC: new `unsafe` in first-party code requires explicit
+      # justification in the PR description. This check enforces the default
+      # of "none"; landing a justified unsafe block means updating this check
+      # in the same PR, which forces the justification into review.
+      - name: Forbid unsafe in first-party contract code
+        run: |
+          if grep -rnE 'unsafe[[:space:]]*(\{|fn\b|impl\b|trait\b|mod\b)|unsafe[[:space:]]+extern|allow\(unsafe_code\)' \
+              contracts/governance/src contracts/token/src; then
+            echo "::error::unsafe found in first-party contract code. Per docs/static-analysis.md this needs explicit justification in the PR description and a reviewed update to this check."
+            exit 1
+          fi
+          echo "No unsafe in first-party contract code."

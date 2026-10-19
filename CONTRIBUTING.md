@@ -163,6 +163,15 @@ are committed; inputs a run discovers are added to the same directories. Crashes
 land in `contracts/fuzz/artifacts/` (gitignored): minimize with
 `cargo fuzz tmin <target> <crash-file>` and keep the result as a corpus seed.
 
+### Security Static Analysis
+
+Two security analyzers run in per-PR CI: Semgrep over `frontend/` and `sdk/`
+(community TypeScript/React rulesets) and cargo-geiger over `contracts/` plus
+a hard gate that forbids `unsafe` in first-party contract code. How to run
+them locally, how to triage findings, the inline-suppression convention for
+false positives, and the justification policy for new `unsafe` are documented
+in [docs/static-analysis.md](docs/static-analysis.md).
+
 ### Prerequisites and Toolchains
 
 To run all test suites locally, ensure you have the following toolchains installed:
@@ -173,6 +182,8 @@ To run all test suites locally, ensure you have the following toolchains install
 | **WASM Target** | `wasm32-unknown-unknown` | `rustup target add wasm32-unknown-unknown` | Smart contract compilation |
 | **Clippy** | stable | `rustup component add clippy` | Rust linting |
 | **cargo-audit** | latest | `cargo install cargo-audit` | Security vulnerability auditing |
+| **cargo-geiger** | latest | `cargo install cargo-geiger --locked` | Unsafe-code baseline for `contracts/` |
+| **Semgrep** | latest | `pipx install semgrep` | Security scanning of `frontend/` and `sdk/` |
 | **Node.js** | ≥ 18 (CI uses 20) | `nvm install 20 && nvm use 20` | Frontend, SDK, integration tests |
 | **npm** | ≥ 9 | Bundled with Node.js | Package management |
 | **Stellar CLI** | latest | `cargo install stellar-cli --features opt` | Contract CLI invocations |
