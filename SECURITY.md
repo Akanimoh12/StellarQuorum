@@ -21,6 +21,9 @@ Reports are visible only to you and the maintainers. If you cannot use GitHub
 private reporting, open a public issue that says only that you need a private
 channel, without any technical detail, and a maintainer will arrange one.
 
+See the [Bug Bounty Program](BUG_BOUNTY.md) for reward eligibility, severity
+categories, triage, and payout terms. No monetary bounty is currently active.
+
 ## What to expect
 
 | Step | Target |
