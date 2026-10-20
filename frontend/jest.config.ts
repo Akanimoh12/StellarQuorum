@@ -12,7 +12,9 @@ const createJestConfig = nextJest({
 const config: Config = {
   testEnvironment: "jest-environment-jsdom",
   setupFilesAfterEnv: ["<rootDir>/jest.setup.ts"],
-  testPathIgnorePatterns: ["<rootDir>/node_modules/", "<rootDir>/.next/"],
+  // e2e/ is the Playwright suite (#313); its *.spec.ts files are run by
+  // `npm run test:e2e`, and Jest must not pick them up.
+  testPathIgnorePatterns: ["<rootDir>/node_modules/", "<rootDir>/.next/", "<rootDir>/e2e/"],
 };
 
 export default createJestConfig(config);

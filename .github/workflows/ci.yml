@@ -97,6 +97,15 @@ jobs:
       # visible in a normal code review instead of buried in workflow YAML.
       - name: cargo audit
         run: cd contracts && cargo audit --config audit.toml
+      # Issue #336: fails on any dependency whose license is not on the
+      # permissive allowlist in contracts/deny.toml (documented in
+      # docs/dependency-licenses.md). cargo audit catches known
+      # vulnerabilities; this catches a copyleft license arriving unnoticed
+      # and surfacing later in a downstream integrator's legal review.
+      - name: Install cargo-deny
+        uses: taiki-e/install-action@cargo-deny
+      - name: cargo deny (licenses)
+        run: cd contracts && cargo deny check licenses
       # Issue #180: makes "measurable reduction in job duration" checkable from the
       # run itself rather than by eyeballing two runs side by side. If the cache
       # ever regresses to a miss, the summary says so on the run that shows it.
@@ -153,6 +162,16 @@ jobs:
       # advisory + dependency path (npm audit's default human output).
       - name: npm audit (high + critical)
         run: cd frontend && npm audit --audit-level=high
+      # Issue #336: fails on a dependency whose SPDX license is not on the
+      # allowlist in scripts/check-npm-licenses.mjs (documented in
+      # docs/dependency-licenses.md). license-checker reads the installed
+      # tree that `npm ci` just produced, so this checks the exact set of
+      # packages the build and tests ran against.
+      - name: Dependency license check
+        run: |
+          cd frontend
+          npx --yes license-checker@25.0.1 --json --out "$RUNNER_TEMP/frontend-licenses.json"
+          node ../scripts/check-npm-licenses.mjs "$RUNNER_TEMP/frontend-licenses.json"
 
   sdk:
     name: Build and test SDK
@@ -179,3 +198,49 @@ jobs:
       # with no automated check surfacing them.
       - name: npm audit (high + critical)
         run: cd sdk && npm audit --audit-level=high
+      # Issue #336: same license allowlist as the frontend job.
+      - name: Dependency license check
+        run: |
+          cd sdk
+          npx --yes license-checker@25.0.1 --json --out "$RUNNER_TEMP/sdk-licenses.json"
+          node ../scripts/check-npm-licenses.mjs "$RUNNER_TEMP/sdk-licenses.json"
+
+  # Issue #313: the wallet-connect and vote flows must be exercised on all
+  # three browser engines, not just Chromium — Freighter's extension surface
+  # and the app's client components can behave differently on Gecko and
+  # WebKit. Engine-specific skips are documented in frontend/e2e/README.md
+  # rather than silently dropped. Builds on the base Playwright suite (#24).
+  e2e:
+    name: E2E (Chromium, Firefox, WebKit)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: |
+            frontend/package-lock.json
+            sdk/package-lock.json
+      # The frontend imports @quorum/sdk from ../sdk, so the SDK dist must
+      # exist before next build (same reason as the frontend job).
+      - name: Build SDK
+        run: cd sdk && npm ci && npm run build
+      - name: Install frontend dependencies
+        run: cd frontend && npm ci
+      # Fixture mode is the default when no contract ID is set, so the app
+      # renders the bundled proposals without any secrets in CI.
+      - name: Build frontend
+        run: cd frontend && npm run build
+      - name: Install Playwright browsers
+        run: cd frontend && npx playwright install --with-deps chromium firefox webkit
+      - name: Run E2E suite across all engines
+        run: cd frontend && npx playwright test
+      - name: Upload Playwright report
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: frontend/playwright-report/
+          if-no-files-found: ignore
+          retention-days: 7
