@@ -124,6 +124,22 @@ All test suites and verification checks must pass before opening or merging a pu
 | **SDK** | Client SDK tests (`sdk/`) | `cd sdk && npm test` | `npm test` |
 | **Integration Stubs** | Integration test stubs (`tests/`) | `cd frontend && npx jest ../tests` | `npx jest tests/` |
 
+### Local Network Lifecycle Test
+
+`sdk/test/e2e/lifecycle.e2e.test.ts` drives a full proposal lifecycle (create,
+three votes, finalize, timelock, execute) through the SDK against a real Soroban
+standalone network. It is skipped by `npm test`. To run it, build the contracts,
+start a quickstart network, install the `stellar` CLI, and point the suite at the
+network:
+
+```bash
+cd contracts && cargo build --target wasm32-unknown-unknown --release && cd ..
+cd sdk && \
+QUORUM_E2E_RPC_URL=http://localhost:8000/soroban/rpc \
+QUORUM_E2E_FRIENDBOT_URL=http://localhost:8000/friendbot \
+npm run test:e2e
+```
+
 ### Mutation Testing
 
 The contract suites also have a mutation run: `cargo mutants` rewrites guards,
