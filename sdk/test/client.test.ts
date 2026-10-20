@@ -1,4 +1,4 @@
-import { rpc, Transaction, Address, nativeToScVal, scValToNative, xdr } from '@stellar/stellar-sdk';
+import { Account, rpc, Transaction, Address, nativeToScVal, scValToNative, xdr } from '@stellar/stellar-sdk';
 import { jest } from '@jest/globals';
 import { QuorumClient, TESTNET } from '../src/client';
 import type { QuorumClientConfig } from '../src/types';
@@ -234,5 +234,30 @@ describe('voting power', () => {
   it('surfaces a failed read instead of reporting zero power', async () => {
     fails('HostError: Error(Contract, #1)');
     await expect(client.getVotingPower(VOTER, 999)).rejects.toThrow('Error(Contract, #1)');
+  });
+});
+
+describe('transaction builders', () => {
+  it('buildExecute(source, id) sends source as the executor, then the proposal id', async () => {
+    // Stub the account lookup and footprint assembly so the builder runs
+    // offline and the unsigned transaction can be inspected.
+    const getAccount = jest.spyOn(rpc.Server.prototype, 'getAccount').mockResolvedValue(new Account(VOTER, '0'));
+    const prepare = jest.spyOn(rpc.Server.prototype, 'prepareTransaction').mockImplementation(async tx => tx as never);
+    try {
+      await client.buildExecute(VOTER, 5n);
+
+      const tx = prepare.mock.calls[0][0] as Transaction;
+      const func = (tx.operations[0] as { func: xdr.HostFunction }).func;
+      if (func.type !== 'hostFunctionTypeInvokeContract') throw new Error('Expected contract invocation');
+      const { method, args } = invoke(func.invokeContract);
+
+      expect(method).toBe('execute');
+      expect(args.map(a => a.type)).toEqual(['scvAddress', 'scvU64']);
+      expect(Address.fromScVal(args[0]).toString()).toBe(VOTER);
+      expect(scValToNative(args[1])).toBe(5n);
+    } finally {
+      getAccount.mockRestore();
+      prepare.mockRestore();
+    }
   });
 });

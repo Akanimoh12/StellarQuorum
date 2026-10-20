@@ -31,6 +31,9 @@ function allowsInsecureRpc(rpcUrl: string): boolean {
     hostname === '[::1]' ||
     /^127(\.\d{1,3}){3}$/.test(hostname)
   );
+}
+
+/**
  * Default page size for paginated proposal listing (issue #118).
  *
  * Matches the recommendation in `docs/proposal-list-performance.md`: 50 cards
@@ -114,8 +117,10 @@ export class QuorumClient {
 
   constructor(config: QuorumClientConfig) {
     this.config = config;
-    this.server = new SorobanRpc.Server(config.rpcUrl, { allowHttp: allowsInsecureRpc(config.rpcUrl) });
-    this.server = new rpc.Server(config.rpcUrl, { timeout: config.requestTimeoutMs ?? DEFAULT_REQUEST_TIMEOUT_MS });
+    this.server = new rpc.Server(config.rpcUrl, {
+      allowHttp: allowsInsecureRpc(config.rpcUrl),
+      timeout: config.requestTimeoutMs ?? DEFAULT_REQUEST_TIMEOUT_MS,
+    });
     this.governance = new Contract(config.governanceContractId);
     // tokenContractId is required by the config type but older callers
     // (e.g. bench RPC mode) only pass a governance id — stay usable and fail
@@ -557,9 +562,9 @@ export class QuorumClient {
   /**
    * Builds signable XDR for `execute(proposal_id)` (issue #115).
    *
-   * Like `finalize`, `execute` takes no signer in the contract, so `source`
-   * pays the fee. Only a `Queued` proposal whose timelock has expired can be
-   * executed.
+   * `execute(executor, proposal_id)` requires the executor's authorization, so
+   * `source` is both the executor and the fee payer. Only a `Queued` proposal
+   * whose timelock has expired can be executed.
    *
    * @throws {ProposalNotFoundError} unknown proposal id.
    * @throws {ProposalNotPassedError} proposal is not `Queued` (still active,
@@ -570,6 +575,7 @@ export class QuorumClient {
     return this.buildGovernanceTransaction(
       source,
       'execute',
+      new Address(source).toScVal(),
       nativeToScVal(proposalId, { type: 'u64' }),
     );
   }
