@@ -1,0 +1,69 @@
+name: Semgrep
+
+# Issue #333: security-focused static analysis for the TypeScript packages.
+# `cargo clippy` covers the contracts and ESLint covers style/correctness in
+# frontend/ and sdk/, but neither flags the patterns Semgrep's community
+# TypeScript/React rulesets catch — unsafe `dangerouslySetInnerHTML`, obvious
+# injection sinks, insecure randomness used as a security primitive, and so on.
+#
+# Runs only when a PR (or push to main) touches either TypeScript package, the
+# ignore list, or this workflow. Triage guidance and the inline-suppression
+# convention live in docs/static-analysis.md.
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'frontend/**'
+      - 'sdk/**'
+      - '.semgrepignore'
+      - '.github/workflows/semgrep.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'frontend/**'
+      - 'sdk/**'
+      - '.semgrepignore'
+      - '.github/workflows/semgrep.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: semgrep-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  semgrep:
+    name: Semgrep (TypeScript / React)
+    runs-on: ubuntu-latest
+    # Official Semgrep image; ships the CLI and the runtime `semgrep scan`
+    # needs to resolve the community registry packs.
+    container:
+      image: returntocorp/semgrep
+    steps:
+      - uses: actions/checkout@v4
+      # `p/typescript` is the community language pack for TypeScript (security
+      # audit, correctness and injection rules); `p/react` adds the React /
+      # JSX-specific rules (blank targets, `dangerouslySetInnerHTML`, unsafe
+      # `href` and friends). `.semgrepignore` keeps node_modules, build output
+      # and test files — which ESLint already owns — out of the scan.
+      #
+      # `--error` makes any finding fail the job; `--metrics=off` keeps the
+      # scanned file list local. Known false positives are suppressed inline
+      # with `// nosemgrep: <rule-id> -- reason` — see docs/static-analysis.md.
+      - name: Scan frontend and SDK
+        run: semgrep scan --error --metrics=off --config=p/typescript --config=p/react
+      - name: Triage instructions
+        if: failure()
+        run: |
+          {
+            echo "### Semgrep found findings (or the scan failed)"
+            echo ""
+            echo "Each finding is either a real issue or a false positive."
+            echo "Fix real issues; suppress false positives inline with"
+            echo "\`// nosemgrep: <rule-id> -- <reason>\` and a short justification"
+            echo "of why the pattern is safe here."
+            echo ""
+            echo "Full guidance: \`docs/static-analysis.md\`."
+          } >> "$GITHUB_STEP_SUMMARY"

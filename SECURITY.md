@@ -60,6 +60,10 @@ Out of scope:
 - Social engineering, spam, and volumetric denial-of-service.
 - Contracts deployed by third parties from this code.
 
+A third-party audit of the contracts is scoped in
+[docs/audit-scope.md](docs/audit-scope.md); findings and their remediation
+are tracked as public issues per that document.
+
 ## Safe harbour
 
 We will not pursue action against researchers who act in good faith: they test

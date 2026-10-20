@@ -1,0 +1,29 @@
+# Paths excluded from the Semgrep scan (see docs/static-analysis.md).
+# A committed .semgrepignore replaces Semgrep's built-in default list, so
+# dependency and build directories that the defaults would skip are listed
+# here explicitly.
+
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+build/
+.next/
+out/
+coverage/
+
+# Lockfiles and fixtures
+package-lock.json
+**/*.min.js
+frontend/public/
+
+# Tests are owned by ESLint and Jest; Semgrep scans shipped code
+frontend/test/
+sdk/test/
+sdk/bench/
+**/*.test.ts
+**/*.test.tsx
+**/*.test.js
+frontend/scripts/
+sdk/scripts/
