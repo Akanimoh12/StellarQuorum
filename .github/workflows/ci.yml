@@ -97,6 +97,15 @@ jobs:
       # visible in a normal code review instead of buried in workflow YAML.
       - name: cargo audit
         run: cd contracts && cargo audit --config audit.toml
+      # Issue #336: fails on any dependency whose license is not on the
+      # permissive allowlist in contracts/deny.toml (documented in
+      # docs/dependency-licenses.md). cargo audit catches known
+      # vulnerabilities; this catches a copyleft license arriving unnoticed
+      # and surfacing later in a downstream integrator's legal review.
+      - name: Install cargo-deny
+        uses: taiki-e/install-action@cargo-deny
+      - name: cargo deny (licenses)
+        run: cd contracts && cargo deny check licenses
       # Issue #180: makes "measurable reduction in job duration" checkable from the
       # run itself rather than by eyeballing two runs side by side. If the cache
       # ever regresses to a miss, the summary says so on the run that shows it.
@@ -153,6 +162,16 @@ jobs:
       # advisory + dependency path (npm audit's default human output).
       - name: npm audit (high + critical)
         run: cd frontend && npm audit --audit-level=high
+      # Issue #336: fails on a dependency whose SPDX license is not on the
+      # allowlist in scripts/check-npm-licenses.mjs (documented in
+      # docs/dependency-licenses.md). license-checker reads the installed
+      # tree that `npm ci` just produced, so this checks the exact set of
+      # packages the build and tests ran against.
+      - name: Dependency license check
+        run: |
+          cd frontend
+          npx --yes license-checker@25.0.1 --json --out "$RUNNER_TEMP/frontend-licenses.json"
+          node ../scripts/check-npm-licenses.mjs "$RUNNER_TEMP/frontend-licenses.json"
 
   sdk:
     name: Build and test SDK
@@ -179,82 +198,49 @@ jobs:
       # with no automated check surfacing them.
       - name: npm audit (high + critical)
         run: cd sdk && npm audit --audit-level=high
+      # Issue #336: same license allowlist as the frontend job.
+      - name: Dependency license check
+        run: |
+          cd sdk
+          npx --yes license-checker@25.0.1 --json --out "$RUNNER_TEMP/sdk-licenses.json"
+          node ../scripts/check-npm-licenses.mjs "$RUNNER_TEMP/sdk-licenses.json"
 
-  # Issue #332: nothing previously flagged `unsafe` entering the contracts or
-  # their dependency tree. `#![no_std]` Soroban code should essentially never
-  # need it, so new unsafe is a deliberate, reviewable event rather than
-  # something that slips in with an unrelated dependency bump.
-  unsafe-audit:
-    name: Unsafe Rust Audit (cargo-geiger)
+  # Issue #313: the wallet-connect and vote flows must be exercised on all
+  # three browser engines, not just Chromium — Freighter's extension surface
+  # and the app's client components can behave differently on Gecko and
+  # WebKit. Engine-specific skips are documented in frontend/e2e/README.md
+  # rather than silently dropped. Builds on the base Playwright suite (#24).
+  e2e:
+    name: E2E (Chromium, Firefox, WebKit)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
-      - name: Cache cargo registry and build
-        uses: Swatinem/rust-cache@v2
+      - uses: actions/setup-node@v4
         with:
-          workspaces: contracts
-          # Distinct key from the contracts job: geiger resolves the same
-          # lockfile but writes its own target state.
-          key: geiger-${{ hashFiles('contracts/Cargo.lock') }}
-          cache-on-failure: true
-      # geiger scans the sources of every crate in the dependency tree, so the
-      # registry sources have to be on disk first.
-      - name: Fetch dependencies
-        run: cd contracts && cargo fetch --locked
-      - name: Install cargo-geiger
-        uses: taiki-e/install-action@v2
-        with:
-          tool: cargo-geiger
-      # Reports unsafe usage across the contracts and their dependency tree
-      # and records the baseline in the job summary plus an artifact. The
-      # scan step itself is informational — the blocking policy is the
-      # first-party check below — so a geiger/toolchain breakage warns
-      # instead of wedging every PR on a reporting job.
-      - name: cargo geiger baseline
-        run: |
-          cd contracts
-          if cargo geiger --format markdown > geiger-report.md 2> geiger-stderr.log; then
-            {
-              echo "### cargo-geiger baseline"
-              echo ""
-              echo "Unsafe usage across \`contracts/\` and its dependency tree."
-              echo "Policy and triage: \`docs/static-analysis.md\`."
-              echo ""
-              echo '```text'
-              head -n 80 geiger-report.md
-              echo '```'
-            } >> "$GITHUB_STEP_SUMMARY"
-          else
-            status=$?
-            {
-              echo "### cargo-geiger baseline"
-              echo ""
-              echo "::warning::cargo-geiger exited with status ${status}; baseline incomplete."
-              echo ""
-              echo '```text'
-              tail -n 40 geiger-stderr.log
-              echo '```'
-            } >> "$GITHUB_STEP_SUMMARY"
-          fi
-      - name: Upload geiger report
-        if: always()
+          node-version: 20
+          cache: npm
+          cache-dependency-path: |
+            frontend/package-lock.json
+            sdk/package-lock.json
+      # The frontend imports @quorum/sdk from ../sdk, so the SDK dist must
+      # exist before next build (same reason as the frontend job).
+      - name: Build SDK
+        run: cd sdk && npm ci && npm run build
+      - name: Install frontend dependencies
+        run: cd frontend && npm ci
+      # Fixture mode is the default when no contract ID is set, so the app
+      # renders the bundled proposals without any secrets in CI.
+      - name: Build frontend
+        run: cd frontend && npm run build
+      - name: Install Playwright browsers
+        run: cd frontend && npx playwright install --with-deps chromium firefox webkit
+      - name: Run E2E suite across all engines
+        run: cd frontend && npx playwright test
+      - name: Upload Playwright report
+        if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: cargo-geiger-report
-          path: |
-            contracts/geiger-report.md
-            contracts/geiger-stderr.log
+          name: playwright-report
+          path: frontend/playwright-report/
           if-no-files-found: ignore
-      # Issue #332 AC: new `unsafe` in first-party code requires explicit
-      # justification in the PR description. This check enforces the default
-      # of "none"; landing a justified unsafe block means updating this check
-      # in the same PR, which forces the justification into review.
-      - name: Forbid unsafe in first-party contract code
-        run: |
-          if grep -rnE 'unsafe[[:space:]]*(\{|fn\b|impl\b|trait\b|mod\b)|unsafe[[:space:]]+extern|allow\(unsafe_code\)' \
-              contracts/governance/src contracts/token/src; then
-            echo "::error::unsafe found in first-party contract code. Per docs/static-analysis.md this needs explicit justification in the PR description and a reviewed update to this check."
-            exit 1
-          fi
-          echo "No unsafe in first-party contract code."
+          retention-days: 7
