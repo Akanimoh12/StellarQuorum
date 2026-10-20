@@ -6,6 +6,59 @@ Quorum is a token-weighted governance system on Stellar. This document describes
 
 ## Threat Model
 
+### Threat model at a glance
+
+The diagram maps each headline vector to the attacker behind it, the contract
+entry point they would use, the asset or outcome they target, and the control
+that stops them. It is a review aid for the prose sections that follow — where
+the diagram and the prose disagree, the prose (checked against the code) wins
+and the diagram is a bug. See [Audit Scope](audit-scope.md) for how these
+vectors are covered by third-party review.
+
+```mermaid
+flowchart TB
+    subgraph SPAM["1. Proposal spam"]
+        direction TB
+        A1["Attacker with a small balance"] -->|"create_proposal()"| EP1["Proposal queue"]
+        EP1 -->|"targets"| AS1["Storage rent, voter attention, indexer load"]
+        AS1 -->|"controlled by"| M1["proposal_threshold: live balance must clear 50,000 QUORUM"]
+    end
+
+    subgraph FLASH["2. Flash-loan voting"]
+        direction TB
+        A2["Attacker who can borrow tokens"] -->|"vote()"| EP2["Voting-power read"]
+        EP2 -->|"targets"| AS2["Vote outcome on a live proposal"]
+        AS2 -->|"controlled by"| M2["get_past_balance at snapshot_ledger: tokens acquired after creation carry zero weight"]
+    end
+
+    subgraph ADMIN["3. Admin-key compromise"]
+        direction TB
+        A3["Holder of a stolen admin key"] -->|"cancel(), pause(), transfer_admin()"| EP3["Admin entry points"]
+        EP3 -->|"targets"| AS3["Liveness of governance, cancelled or paused proposals"]
+        AS3 -->|"bounded by"| M3["Cancel and pause only: no voting, no execution, no parameter change, no mint"]
+    end
+
+    subgraph GUARDIAN["4. Guardian collusion"]
+        direction TB
+        A4["Colluding guardian multisig"] -->|"pause() during the timelock window"| EP4["Guardian entry points"]
+        EP4 -->|"targets"| AS4["Passed proposals awaiting execution"]
+        AS4 -->|"bounded by"| M4["Pause (veto) only: cannot create, vote, execute, cancel or change parameters"]
+    end
+```
+
+### Revisiting the threat model
+
+Any PR that expands the attack surface — a staking module, `execute()` action
+dispatch, multi-wallet support, vote delegation, a new admin or guardian
+capability — must update this diagram and the prose above in the same PR.
+Checklist for the author and the reviewer:
+
+- [ ] Every new externally callable function appears as an entry point, or the PR states why it is not attacker-reachable
+- [ ] Any new asset (custodied tokens, delegated power, accrued rewards) is named as a target
+- [ ] Each new vector has a stated control; a vector with no control is recorded under Known Gaps, not omitted
+- [ ] The Trust Assumptions table still matches the roles and powers the code actually grants
+- [ ] The diagram renders on GitHub and the function names in it match the contract interface
+
 ### 1. Flash-Loan Vote Manipulation
 **Threat:** An attacker borrows a large amount of QUORUM tokens, votes, and returns them in a single transaction.
 **Mitigation:** Voting power is read at the proposal's **snapshot ledger** (the ledger when the proposal was created), not the current balance. Tokens acquired after the snapshot carry zero voting power. The snapshot is immutable once set.
